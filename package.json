@@ -1,0 +1,16 @@
+{
+  "name": "edevlet-mezarlik-verileri",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@infosimples/node_two_captcha": "^1.0.2",
+    "ora": "^5.1.0",
+    "puppeteer": "^5.2.1"
+  }
+}
