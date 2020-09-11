@@ -1,6 +1,5 @@
 const puppeteer = require('puppeteer');
-const CaptchaClient = require('@infosimples/node_two_captcha');
-const { twoCaptchaKey, antiCaptchaKey } = require('./config');
+const { antiCaptchaKey } = require('./config');
 const { URL } = require('url');
 const ora = require('ora');
 const spinner = ora({ spinner: 'dots12' });
@@ -9,12 +8,6 @@ const fs = require('fs');
 anticaptcha.setMinLength(5);
 anticaptcha.setMaxLength(5);
 anticaptcha.setNumeric(2); // only letters
-
-const captchaSolver = new CaptchaClient(twoCaptchaKey, {
-  timeout: 60000,
-  polling: 5000,
-  throwErrors: true
-});
 
 const CITIES = ['Istanbul', 'Konya', 'Bursa', 'Antalya', 'Erzurum', 'Diyarbakir', 'Kocaeli', 'Kahramanmaras', 'Malatya', 'Sakarya', 'Tekirdag'];
 const LINKS = {
@@ -179,17 +172,6 @@ async function solveCaptchaAndSubmit(page, client, captchaBase64) {
     console.log(err);
   }
 }
-
-function solve2Captcha(client, base64Image) {
-  return client.decode({
-    base64: base64Image,
-    min_len: 5,
-    max_len: 5,
-    numeric: 2
-  }).then((response => {
-    return response;
-  })).catch(console.error);
-};
 
 function sleep(sec) {
   return new Promise(resolve => setTimeout(resolve, sec * 1000));
