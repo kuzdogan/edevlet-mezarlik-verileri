@@ -325,7 +325,6 @@ var Anticaptcha = function (clientKey) {
         if (err) {
           return cb(err, null, jsonResult);
         }
-        console.log(jsonResult)
         cb(null, jsonResult);
       });
     }

@@ -5,6 +5,8 @@ const ora = require('ora');
 const spinner = ora({ spinner: 'dots12' });
 const anticaptcha = require('./anticaptcha')(antiCaptchaKey);
 const fs = require('fs');
+const moment = require('moment');
+const retry = require('async-retry');
 anticaptcha.setMinLength(5);
 anticaptcha.setMaxLength(5);
 anticaptcha.setNumeric(2); // only letters
@@ -24,11 +26,16 @@ const LINKS = {
   'Tekirdag': 'https://www.turkiye.gov.tr/tekirdag-buyuksehir-belediyesi-vefat-sorgulama'
 };
 
-(async () => {
 
-  let CITY = 'Istanbul'
-  let eDevletURL = LINKS[CITY];
-  // let eDevletURL = LINKS['Istanbul'];
+let FIRST_DAY = moment('2020-01-01');
+// let LAST_DAY = moment(); // Today
+let LAST_DAY = moment('2020-01-03');
+let numberOfDays = LAST_DAY.diff(FIRST_DAY, 'days');
+console.log('Number of days ', numberOfDays);
+let captchaBase64 = '';
+
+// Main func with async/await
+(async () => {
   console.log('Launching Browser');
   // const browser = await puppeteer.launch({ headless: false });
   const browser = await puppeteer.launch({ headless: true });
@@ -38,7 +45,6 @@ const LINKS = {
   const page = await browser.newPage();
 
   // Extract the CAPTCHA image.
-  let captchaBase64 = '';
   page.on('response', async response => {
     let url = new URL(response.url()); //WHATWH URL API
     if (url.pathname === '/captcha') {
@@ -49,41 +55,58 @@ const LINKS = {
     }
   });
 
+  let city = CITIES[0];
   console.log('Going to the URL');
-  await page.goto(eDevletURL);
+  await page.goto(LINKS[city]);
   console.log('Loaded page');
 
-  let dateStr = '02/09/2018';
-  await enterDate(page, dateStr);
-  let id = await solveCaptchaAndSubmit(page, captchaSolver, captchaBase64);
-
-  // Until captcha is solved correctly, complain and submit again.
-  let trials = 1;
-  while (await isCaptchaError(page)) {
-    console.log('❌ Incorrect Captcha');
-    await anticaptcha.reportIncorrectImageCaptcha(id, (response) => {
-      console.log(response)
-      if (response.status === 'success')
-        console.log('Successfully sent complatint for task ' + id);
-      else
-        console.error(response);
-    }); // Send complaint.
-    trials++;
-    await enterDate(page, dateStr);
-    id = await solveCaptchaAndSubmit(page, captchaSolver, captchaBase64);
+  for (let i = 0; i < numberOfDays; i++) {
+    let date = FIRST_DAY.clone().add(i, 'days');
+    await getDeathsForCityOnDate(page, city, date);
+    await page.goto(LINKS[city]);
   }
-  console.log('Solved in ', trials, ' trials');
-
-  let count = await extractDeathCount(page);
-  console.log('Total ', count, ' deaths found');
-
-  await savePagePDF(page, 'test', CITY);
   // await browser.close();
 })();
 
 
 
 
+
+async function getDeathsForCityOnDate(page, city, date) {
+
+  let dateStr = date.format('DD/MM/YYYY');
+  await enterDate(page, dateStr);
+  let id;
+  try {
+    id = await solveCaptchaAndSubmit(page, captchaBase64);
+  } catch (err) { // Sometimes captcha solvers fail.
+    console.log(err);
+    await page.reload(); // new captcha
+    id = await solveCaptchaAndSubmit(page, captchaBase64);
+  }
+  // Until captcha is solved correctly, complain and submit again.
+  let trials = 1;
+  while (await isCaptchaError(page)) {
+    console.log('❌ Incorrect Captcha');
+    await anticaptcha.reportIncorrectImageCaptcha(id, function (error, response) {
+      if (response.status === 'success')
+        console.log('Successfully sent complatint for task ' + id);
+      else {
+        console.error(response);
+      }
+    }); // Send complaint.
+    trials++;
+    await enterDate(page, dateStr);
+    id = await solveCaptchaAndSubmit(page, captchaBase64);
+  }
+  console.log('Solved in ', trials, ' trials');
+
+  let count = await extractDeathCount(page);
+  console.log('Total ', count, ' deaths found');
+
+  let fileDate = date.format('YYYY-MM-DD');
+  await savePagePDF(page, fileDate, city);
+}
 
 /**
  * Function to extract count. Check "Toplam X " element at the bottom of table. Or count rows.
@@ -157,7 +180,7 @@ function solveAntiCaptcha(captchaBase64) {
  * @param {String} captchaBase64 - Captcha as base64 String
  * @returns {Promise} that resolves to the ID of the 2Captcha work. Used for wrong captcha complaints.
  */
-async function solveCaptchaAndSubmit(page, client, captchaBase64) {
+async function solveCaptchaAndSubmit(page, captchaBase64) {
   try {
     let { text, id } = await solveAntiCaptcha(captchaBase64);
     spinner.succeed('Solved captcha: ' + text + ' with id: ' + id);
