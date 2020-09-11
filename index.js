@@ -1,8 +1,13 @@
 const puppeteer = require('puppeteer');
 const CaptchaClient = require('@infosimples/node_two_captcha');
-const { twoCaptchaKey } = require('./config');
+const { twoCaptchaKey, antiCaptchaKey } = require('./config');
 const { URL } = require('url');
 const ora = require('ora');
+const spinner = ora({ spinner: 'dots12' });
+const anticaptcha = require('./anticaptcha')(antiCaptchaKey);
+anticaptcha.setMinLength(5);
+anticaptcha.setMaxLength(5);
+anticaptcha.setNumeric(2); // only letters
 
 const captchaSolver = new CaptchaClient(twoCaptchaKey, {
   timeout: 60000,
@@ -58,18 +63,34 @@ const LINKS = {
   let id = await solveCaptchaAndSubmit(page, captchaSolver, captchaBase64);
 
   // Until captcha is solved correctly, complain and submit again.
-  let trials = 0;
+  let trials = 1;
   while (await isCaptchaError(page)) {
     console.log('❌ Incorrect Captcha');
-    await captchaSolver.report(id); // Send complaint.
+    await anticaptcha.reportIncorrectImageCaptcha(id, (response) => {
+      if (response.status === 'success')
+        console.log('Successfully sent complatint for task ' + id);
+      else
+        console.error(response);
+    }); // Send complaint.
     trials++;
     await enterDate(page, dateStr);
     id = await solveCaptchaAndSubmit(page, captchaSolver, captchaBase64);
   }
   console.log('Solved in ', trials, ' trials');
 
-  // Extract count. Check "Toplam X " element at the bottom of table. Or count rows.
-  let count = await page.$eval('#contentStart > div > div > div > span')
+  let count = await extractDeathCount(page);
+  console.log('Total ', count, ' deaths found');
+  // await browser.close();
+})();
+
+/**
+ * Function to extract count. Check "Toplam X " element at the bottom of table. Or count rows.
+ * 
+ * @param {Object} page - Puppeteer page object.
+ * @returns {Promise<Number>} that resolves to number of deaths.
+ */
+function extractDeathCount(page) {
+  return page.$eval('#contentStart > div > div > div > span')
     .then(elem => { // Found Toplam X element.
       let countStr = elem.innerHTML.match(/(Toplam )(\d+)/)[2];
       return parseInt(countStr);
@@ -80,12 +101,7 @@ const LINKS = {
         return elem.children.length;
       })
     });
-  console.log('Total ', count, ' deaths found');
-  // await browser.close();
-})();
-
-
-
+}
 
 async function enterDate(page, dateStr) {
   console.log('Changing date to ' + dateStr)
@@ -95,6 +111,40 @@ async function enterDate(page, dateStr) {
   await page.keyboard.up('Control');
   await page.keyboard.type(dateStr);
   console.log('Changed date to ' + dateStr);
+}
+/**
+ * Funtion to solve captcha using AntiCaptcha.
+ * 
+ * @param {String} captchaBase64
+ * @returns {Promise<String>} that resolves to the captcha solution text.
+ */
+function solveAntiCaptcha(captchaBase64) {
+  spinner.start('Solving captcha ');
+  return new Promise((resolve, reject) => {
+    // check balance first
+    anticaptcha.getBalance(function (err, balance) {
+      if (err)
+        reject(err);
+      if (balance > 0) {
+        anticaptcha.createImageToTextTask({
+          body: captchaBase64
+        },
+          function (err, taskId) {
+            if (err)
+              reject(err);
+            spinner.text = 'Solving captcha with taskId: ' + taskId + ' ';
+            anticaptcha.getTaskSolution(taskId, function (err, taskSolution) {
+              if (err)
+                reject(err);
+              resolve({ text: taskSolution, id: taskId });
+            });
+          }
+        );
+      } else {
+        reject('Insufficient balance');
+      }
+    });
+  })
 }
 
 /**
@@ -106,10 +156,9 @@ async function enterDate(page, dateStr) {
  * @returns {Promise} that resolves to the ID of the 2Captcha work. Used for wrong captcha complaints.
  */
 async function solveCaptchaAndSubmit(page, client, captchaBase64) {
-  const spinner = ora({ spinner: 'dots12' }).start('Solving captcha ');
   try {
-    let { text, id } = await solveCaptcha(client, captchaBase64);
-    spinner.stopAndPersist({ symbol: '✅', text: 'Solved captcha: ' + text + ' with work id:' + id });
+    let { text, id } = await solveAntiCaptcha(captchaBase64);
+    spinner.succeed('Solved captcha: ' + text + ' with id: ' + id);
     await page.focus('#captcha_name');
     await page.keyboard.type(text);
     await page.focus('#mainForm > div > input.submitButton');
@@ -119,11 +168,10 @@ async function solveCaptchaAndSubmit(page, client, captchaBase64) {
   } catch (err) {
     spinner.stopAndPersist({ symbol: '⚠️', text: 'Error solving captcha' });
     console.log(err);
-    throw new Error('Error solving captcha. Timeout?')
   }
 }
 
-function solveCaptcha(client, base64Image) {
+function solve2Captcha(client, base64Image) {
   return client.decode({
     base64: base64Image,
     min_len: 5,
