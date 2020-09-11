@@ -5,6 +5,7 @@ const { URL } = require('url');
 const ora = require('ora');
 const spinner = ora({ spinner: 'dots12' });
 const anticaptcha = require('./anticaptcha')(antiCaptchaKey);
+const fs = require('fs');
 anticaptcha.setMinLength(5);
 anticaptcha.setMaxLength(5);
 anticaptcha.setNumeric(2); // only letters
@@ -32,11 +33,12 @@ const LINKS = {
 
 (async () => {
 
-  let eDevletURL = LINKS['Sakarya'];
+  let CITY = 'Istanbul'
+  let eDevletURL = LINKS[CITY];
   // let eDevletURL = LINKS['Istanbul'];
   console.log('Launching Browser');
-  const browser = await puppeteer.launch({ headless: false });
-  // const browser = await puppeteer.launch({ headless: true });
+  // const browser = await puppeteer.launch({ headless: false });
+  const browser = await puppeteer.launch({ headless: true });
 
   // Load page
   console.log('Opened new page');
@@ -67,6 +69,7 @@ const LINKS = {
   while (await isCaptchaError(page)) {
     console.log('❌ Incorrect Captcha');
     await anticaptcha.reportIncorrectImageCaptcha(id, (response) => {
+      console.log(response)
       if (response.status === 'success')
         console.log('Successfully sent complatint for task ' + id);
       else
@@ -80,8 +83,14 @@ const LINKS = {
 
   let count = await extractDeathCount(page);
   console.log('Total ', count, ' deaths found');
+
+  await savePagePDF(page, 'test', CITY);
   // await browser.close();
 })();
+
+
+
+
 
 /**
  * Function to extract count. Check "Toplam X " element at the bottom of table. Or count rows.
@@ -196,4 +205,12 @@ function isCaptchaError(page) {
   return page.$('#mainForm > fieldset > div.formRow.required.errored > div.fieldError')
     .then(elem => elem !== null)
     .catch(console.err);
+}
+
+async function savePagePDF(page, dateStr, cityName) {
+  let dir = `./pdfs/${cityName}/`;
+  console.log('Saving PDF');
+  if (!fs.existsSync(dir)) // mkdir if missing
+    fs.mkdirSync(dir, { recursive: true });
+  return page.pdf({ path: `${dir}/${dateStr}.pdf` });
 }
