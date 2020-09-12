@@ -7,6 +7,7 @@ const anticaptcha = require('./anticaptcha')(antiCaptchaKey);
 const fs = require('fs');
 const csv = require('fast-csv');
 const moment = require('moment');
+const { resolve } = require('path');
 anticaptcha.setMinLength(5);
 anticaptcha.setMaxLength(5);
 anticaptcha.setNumeric(2); // only letters
@@ -25,21 +26,45 @@ const LINKS = {
   'Sakarya': 'https://www.turkiye.gov.tr/sakarya-buyuksehir-belediyesi-vefat-sorgulama',
   'Tekirdag': 'https://www.turkiye.gov.tr/tekirdag-buyuksehir-belediyesi-vefat-sorgulama'
 };
-
-
-let FIRST_DAY = moment('2020-02-12');
-let LAST_DAY = moment(); // Today
-// let LAST_DAY = moment('2020-02-01'); // Excluding
-let numberOfDays = LAST_DAY.diff(FIRST_DAY, 'days');
-console.log('Number of days ', numberOfDays);
+const city = process.argv[2]; // Get city name as first arg.
+const CSV_PATH = `./csv/${city.toLowerCase()}.csv`;
 let captchaBase64 = '';
 
-if (!fs.existsSync('./csv/')) { // Create .csv dir
-  fs.mkdirSync('./csv/');
+init()
+  .then(main);
+
+async function init() {
+  if (!CITIES.includes(city)) {
+    console.error('Wrong city name. Either city is not included or misspelled.');
+    process.exit(-1);
+  }
+
+  if (!fs.existsSync('./csv/')) { // Create .csv dir
+    fs.mkdirSync('./csv/');
+  }
+
+  if (!fs.existsSync(CSV_PATH)) { // 01 Jan if not processed before.
+    firstDay = moment('2020-01-01');
+  } else { // Lookup the last day. Assign the next day as first day.
+    let lastRow = await getLastRow(CSV_PATH);
+    let date = lastRow[0] + '.2020';
+    firstDay = moment(date, 'DD.MM.YYYY').add(1, 'day');
+  }
+  lastDay = moment(); // Today
+  // let lastDay = moment('2020-02-01'); // Excluding
+  let numberOfDays = lastDay.diff(firstDay, 'days');
+
+  console.log('First Day: ' + firstDay.format('DD MMM') + '\t Last Day: ' + lastDay.format('DD MMM'));
+  if (numberOfDays === 0) {
+    console.log('Number of days ', numberOfDays);
+    process.exit(0);
+  }
+  console.log('Number of days ', numberOfDays);
+  return { firstDay, numberOfDays }
 }
 
 // Main func with async/await
-(async () => {
+async function main({ firstDay, numberOfDays }) {
   console.log('Launching Browser');
   // const browser = await puppeteer.launch({ headless: false });
   const browser = await puppeteer.launch({ headless: true });
@@ -58,76 +83,68 @@ if (!fs.existsSync('./csv/')) { // Create .csv dir
       // page.removeListener('response');
     }
   });
+  console.log('Going to the URL');
+  await page.goto(LINKS[city]);
+  console.log('Loaded page');
 
-  // For each city.
-  for (let i = 0; i < 1; i++) {
-    // for (let i = 0; i<CITIES.length; i++) {
-    let city = CITIES[0];
+  // CSV write settings.
+  const csvStream = csv.format({
+    headers: fs.existsSync(CSV_PATH) ? false : true, // Append if file exists.
+    includeEndRowDelimiter: true
+  });
+  const fsWriteStream = fs.createWriteStream(CSV_PATH, { flags: 'a' }); // append flag.
+  fsWriteStream.on('error', function (err) {
+    console.error(err);
+  });
+  csvStream.pipe(fsWriteStream).on('end', () => process.exit());
 
-    console.log('Going to the URL');
-    await page.goto(LINKS[city]);
-    console.log('Loaded page');
-
-    // CSV write settings.
-    const FILE_DIR = `./csv/${city.toLowerCase()}.csv`;
-    const csvStream = csv.format({
-      headers: fs.existsSync(FILE_DIR) ? false : true, // Append if file exists.
-      includeEndRowDelimiter: true
-    });
-    const fsWriteStream = fs.createWriteStream(FILE_DIR, { flags: 'a' }); // append flag.
-    fsWriteStream.on('error', function (err) {
-      console.error(err);
-    });
-    csvStream.pipe(fsWriteStream).on('end', () => process.exit());
-
-    // Each day.
-    for (let j = 0; j < numberOfDays; j++) {
-      // 2020
-      let date2020 = FIRST_DAY.clone().add(j, 'days');
-      if (date2020.isSame('2020-02-29')) { // Skip 29th Feb
-        date2020 = date2020.clone().add(1, 'days');
-      }
-      let count2020 = await getDeathsOnDate(page, date2020);
-      let fileDate2020 = date2020.format('YYYY-MM-DD');
-      await savePagePDF(page, fileDate2020, city);
-      await page.goto(LINKS[city]); // Reload
-
-      // 2019
-      let date2019 = date2020.clone().subtract(1, 'year');
-      let count2019 = await getDeathsOnDate(page, date2019);
-      let fileDate2019 = date2019.format('YYYY-MM-DD');
-      await savePagePDF(page, fileDate2019, city);
-      await page.goto(LINKS[city]); // Reload
-
-      // 2018
-      let date2018 = date2019.clone().subtract(1, 'year');
-      let count2018 = await getDeathsOnDate(page, date2018);
-      let fileDate2018 = date2018.format('YYYY-MM-DD');
-      await savePagePDF(page, fileDate2018, city);
-      await page.goto(LINKS[city]); // Reload
-
-      // 2017
-      let date2017 = date2018.clone().subtract(1, 'year');
-      let count2017 = await getDeathsOnDate(page, date2017);
-      let fileDate2017 = date2017.format('YYYY-MM-DD');
-      await savePagePDF(page, fileDate2017, city);
-      await page.goto(LINKS[city]); // Reload
-
-      console.log('==========================');
-      console.log('\tTarih: ', date2020.format('DD.MM.YYYY'));
-      console.log('\tVefat sayisi: ', count2020);
-      console.log('\tTarih: ', date2019.format('DD.MM.YYYY'));
-      console.log('\tVefat sayisi: ', count2019);
-      console.log('\tTarih: ', date2018.format('DD.MM.YYYY'));
-      console.log('\tVefat sayisi: ', count2018);
-      console.log('\tTarih: ', date2017.format('DD.MM.YYYY'));
-      console.log('\tVefat sayisi: ', count2017);
-      csvStream.write({ Tarih: date2020.format('DD.MM'), VefatSayisi2020: count2020, VefatSayisi2019: count2019, VefatSayisi2018: count2018, VefatSayisi2017: count2017 });
+  // Each day.
+  for (let j = 0; j < numberOfDays; j++) {
+    // 2020
+    let date2020 = firstDay.clone().add(j, 'days');
+    if (date2020.isSame('2020-02-29')) { // Skip 29th Feb
+      date2020 = date2020.clone().add(1, 'days');
     }
-    csvStream.end();
+    let count2020 = await getDeathsOnDate(page, date2020);
+    let fileDate2020 = date2020.format('YYYY-MM-DD');
+    await savePagePDF(page, fileDate2020, city);
+    await page.goto(LINKS[city]); // Reload
+
+    // 2019
+    let date2019 = date2020.clone().subtract(1, 'year');
+    let count2019 = await getDeathsOnDate(page, date2019);
+    let fileDate2019 = date2019.format('YYYY-MM-DD');
+    await savePagePDF(page, fileDate2019, city);
+    await page.goto(LINKS[city]); // Reload
+
+    // 2018
+    let date2018 = date2019.clone().subtract(1, 'year');
+    let count2018 = await getDeathsOnDate(page, date2018);
+    let fileDate2018 = date2018.format('YYYY-MM-DD');
+    await savePagePDF(page, fileDate2018, city);
+    await page.goto(LINKS[city]); // Reload
+
+    // 2017
+    let date2017 = date2018.clone().subtract(1, 'year');
+    let count2017 = await getDeathsOnDate(page, date2017);
+    let fileDate2017 = date2017.format('YYYY-MM-DD');
+    await savePagePDF(page, fileDate2017, city);
+    await page.goto(LINKS[city]); // Reload
+
+    console.log('==========================');
+    console.log('\tTarih: ', date2020.format('DD.MM.YYYY'));
+    console.log('\tVefat sayisi: ', count2020);
+    console.log('\tTarih: ', date2019.format('DD.MM.YYYY'));
+    console.log('\tVefat sayisi: ', count2019);
+    console.log('\tTarih: ', date2018.format('DD.MM.YYYY'));
+    console.log('\tVefat sayisi: ', count2018);
+    console.log('\tTarih: ', date2017.format('DD.MM.YYYY'));
+    console.log('\tVefat sayisi: ', count2017);
+    csvStream.write({ Tarih: date2020.format('DD.MM'), VefatSayisi2020: count2020, VefatSayisi2019: count2019, VefatSayisi2018: count2018, VefatSayisi2017: count2017 });
   }
+  csvStream.end();
   await browser.close();
-})();
+}
 
 
 
@@ -301,4 +318,18 @@ async function savePagePDF(page, dateStr, cityName) {
   if (!fs.existsSync(dir)) // mkdir if missing
     fs.mkdirSync(dir, { recursive: true });
   return page.pdf({ path: `${dir}/${dateStr}.pdf` });
+}
+
+function getLastRow(filePath) {
+  return new Promise((resolve, reject) => {
+    const stream = fs.createReadStream(filePath);
+    let lastRow;
+    csv.parseStream(stream)
+      .on('error', error => reject(error))
+      .on('data', row => lastRow = row)
+      .on('end', () => {
+        console.log('Last row is:', lastRow);
+        resolve(lastRow);
+      });
+  })
 }
