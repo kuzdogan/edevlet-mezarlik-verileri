@@ -27,7 +27,7 @@ const LINKS = {
 };
 
 
-let FIRST_DAY = moment('2020-03-01');
+let FIRST_DAY = moment('2020-02-12');
 let LAST_DAY = moment(); // Today
 // let LAST_DAY = moment('2020-02-01'); // Excluding
 let numberOfDays = LAST_DAY.diff(FIRST_DAY, 'days');
@@ -62,7 +62,7 @@ if (!fs.existsSync('./csv/')) { // Create .csv dir
   // For each city.
   for (let i = 0; i < 1; i++) {
     // for (let i = 0; i<CITIES.length; i++) {
-    let city = CITIES[1];
+    let city = CITIES[0];
 
     console.log('Going to the URL');
     await page.goto(LINKS[city]);
@@ -135,25 +135,30 @@ if (!fs.existsSync('./csv/')) { // Create .csv dir
 
 async function getDeathsOnDate(page, date) {
 
-  let dateStr = date.format('DD/MM/YYYY');
-  let id = await submitCaptcha(page, dateStr, captchaBase64);
+  try {
+    let dateStr = date.format('DD/MM/YYYY');
+    let id = await submitCaptcha(page, dateStr, captchaBase64);
 
-  // Until captcha is solved correctly, complain and submit again.
-  let trials = 1;
-  while (await isCaptchaError(page)) {
-    console.log('❌ Incorrect Captcha');
-    anticaptcha.reportIncorrectImageCaptcha(id, function (error, response) { // Don't await.
-      if (response.status === 'success')
-        console.log('Successfully sent complatint for task ' + id);
-    });
-    trials++;
-    id = await submitCaptcha(page, dateStr, captchaBase64);
+    // Until captcha is solved correctly, complain and submit again.
+    let trials = 1;
+    while (await isCaptchaError(page)) {
+      console.log('❌ Incorrect Captcha');
+      anticaptcha.reportIncorrectImageCaptcha(id, function (error, response) { // Don't await.
+        if (response.status === 'success')
+          console.log('Successfully sent complatint for task ' + id);
+      });
+      trials++;
+      id = await submitCaptcha(page, dateStr, captchaBase64);
+    }
+    console.log('Solved in ', trials, ' trials');
+
+    let count = await extractDeathCount(page);
+    console.log('Total ', count, ' deaths found');
+    return count;
+  } catch (err) {
+    console.error(err);
+    return getDeathsOnDate(page, date); // Start over if error.
   }
-  console.log('Solved in ', trials, ' trials');
-
-  let count = await extractDeathCount(page);
-  console.log('Total ', count, ' deaths found');
-  return count;
 }
 
 /**
