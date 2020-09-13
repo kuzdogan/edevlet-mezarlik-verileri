@@ -7,13 +7,9 @@ const anticaptcha = require('./anticaptcha')(antiCaptchaKey);
 const fs = require('fs');
 const csv = require('fast-csv');
 const moment = require('moment');
-const { resolve } = require('path');
 // anticaptcha.setMinLength(5);
 // anticaptcha.setMaxLength(5);
 // anticaptcha.setNumeric(2); // only letters
-// anticaptcha.setPhrase(false);
-// anticaptcha.setCase(false);
-// anticaptcha.setMath(false);
 
 const CITIES = ['Istanbul', 'Konya', 'Bursa', 'Antalya', 'Erzurum', 'Diyarbakir', 'Kocaeli', 'Kahramanmaras', 'Malatya', 'Sakarya', 'Tekirdag'];
 const LINKS = {
@@ -36,7 +32,11 @@ let captchaBase64 = '';
 init()
   .then(main);
 
+
+
+
 async function init() {
+  // Check argument
   if (!CITIES.includes(city)) {
     console.error('Wrong city name. Either city is not included or misspelled.');
     process.exit(-1);
@@ -46,23 +46,22 @@ async function init() {
     fs.mkdirSync('./csv/');
   }
 
-  if (!fs.existsSync(CSV_PATH)) { // 01 Jan if not processed before.
+  if (!fs.existsSync(CSV_PATH)) { // 01 Jan if city not processed before.
     firstDay = moment('2020-01-01');
-  } else { // Lookup the last day. Assign the next day as first day.
+  } else { // Lookup the last day extracted. Assign the next day as first day.
     let lastRow = await getLastRow(CSV_PATH);
     let date = lastRow[0] + '.2020';
     firstDay = moment(date, 'DD.MM.YYYY').add(1, 'day');
   }
   lastDay = moment(); // Today
-  // let lastDay = moment('2020-02-01'); // Excluding
   let numberOfDays = lastDay.diff(firstDay, 'days');
 
   console.log('First Day: ' + firstDay.format('DD MMM') + '\t Last Day: ' + lastDay.format('DD MMM'));
+  console.log('Number of days ', numberOfDays);
+
   if (numberOfDays === 0) {
-    console.log('Number of days ', numberOfDays);
     process.exit(0);
   }
-  console.log('Number of days ', numberOfDays);
   return { firstDay, numberOfDays }
 }
 
@@ -76,7 +75,7 @@ async function main({ firstDay, numberOfDays }) {
   console.log('Opened new page');
   const page = await browser.newPage();
 
-  // Extract the CAPTCHA image.
+  // Listener to extract the CAPTCHA image.
   page.on('response', async response => {
     let url = new URL(response.url()); //WHATWH URL API
     if (url.pathname === '/captcha') {
@@ -86,6 +85,7 @@ async function main({ firstDay, numberOfDays }) {
       // page.removeListener('response');
     }
   });
+
   console.log('Going to the URL');
   await page.goto(LINKS[city]);
   console.log('Loaded page');
@@ -143,18 +143,24 @@ async function main({ firstDay, numberOfDays }) {
     console.log('\tVefat sayisi: ', count2018);
     console.log('\tTarih: ', date2017.format('DD.MM.YYYY'));
     console.log('\tVefat sayisi: ', count2017);
+
     csvStream.write({ Tarih: date2020.format('DD.MM'), VefatSayisi2020: count2020, VefatSayisi2019: count2019, VefatSayisi2018: count2018, VefatSayisi2017: count2017 });
-  }
+  } // end loop
   csvStream.end();
   await browser.close();
 }
 
 
 
-
+/**
+ * Function to get number of death in a particular date/
+ * 
+ * @param {Object} page - puppeteer page obj 
+ * @param {Date} date - Moment.js date to be input 
+ * @returns {Number} Number of deaths on that day.
+ */
 
 async function getDeathsOnDate(page, date) {
-
   try {
     let dateStr = date.format('DD/MM/YYYY');
     let id = await submitCaptcha(page, dateStr);
@@ -177,12 +183,12 @@ async function getDeathsOnDate(page, date) {
     return count;
   } catch (err) {
     console.error(err);
-    return getDeathsOnDate(page, date); // Start over if error.
+    return getDeathsOnDate(page, date); // Start over if any error such as network errors
   }
 }
 
 /**
- * Function to extract count. Check "Toplam X " element at the bottom of table. Or count rows.
+ * Function to extract count. Check "Toplam X " element at the bottom of table. Or count rows. If no results, return 0;
  * 
  * @param {Object} page - Puppeteer page object.
  * @returns {Promise<Number>} that resolves to number of deaths.
@@ -207,9 +213,16 @@ function extractDeathCount(page) {
     });
 }
 
+/**
+ * Wrapper func to enterDate and solveAntiCaptcha.
+ * 
+ * 
+ * @param {Object} page - puppeteer page obj 
+ * @param {String} dateStr - date to type in the input 
+ */
 async function enterDateAndSolve(page, dateStr) {
   await enterDate(page, dateStr);
-  return solveAntiCaptcha().catch(err => { // If captcha solving fails getNewCaptcha and retry
+  return solveAntiCaptcha().catch(err => { // If captcha solving fails getNewCaptcha and retry.  Usualy for ERROR_WRONG_FLAGS
     console.log('Caught the error');
     console.log(err.message);
     console.log('Getting new captcha.');
@@ -222,7 +235,8 @@ async function enterDateAndSolve(page, dateStr) {
 
 async function getNewCaptcha(page) {
   await page.goto(LINKS[city]);
-  await sleepSec(2);
+  // New captcha extracted by 'resolve' page listener above.
+  await sleepSec(2); // Wait a little longer for making sure.
 }
 
 async function enterDate(page, dateStr) {
@@ -294,20 +308,6 @@ function sleepSec(sec) {
   return new Promise(resolve => setTimeout(resolve, sec * 1000));
 }
 
-async function retry(fn, n) {
-  for (let i = 0; i < n; i++) {
-    try {
-      if (i > 0) {
-        console.log('function ' + fn.name + ' failed. Trying ' + i + 1 + '. time');
-      }
-      return await fn();
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
-  throw new Error(`Failed retrying ${n} times`);
-}
 /**
  * Function to check if CAPTCHA error is currently shown on the page
  * 
