@@ -8,12 +8,12 @@ const fs = require('fs');
 const csv = require('fast-csv');
 const moment = require('moment');
 const { resolve } = require('path');
-anticaptcha.setMinLength(5);
-anticaptcha.setMaxLength(5);
-anticaptcha.setNumeric(2); // only letters
-anticaptcha.setPhrase(false);
-anticaptcha.setCase(false);
-anticaptcha.setMath(false);
+// anticaptcha.setMinLength(5);
+// anticaptcha.setMaxLength(5);
+// anticaptcha.setNumeric(2); // only letters
+// anticaptcha.setPhrase(false);
+// anticaptcha.setCase(false);
+// anticaptcha.setMath(false);
 
 const CITIES = ['Istanbul', 'Konya', 'Bursa', 'Antalya', 'Erzurum', 'Diyarbakir', 'Kocaeli', 'Kahramanmaras', 'Malatya', 'Sakarya', 'Tekirdag'];
 const LINKS = {
@@ -195,9 +195,15 @@ function extractDeathCount(page) {
     })
     .catch(() => {
       // count table rows.
-      return page.$eval('#table > tbody', elem => {
-        return elem.children.length;
-      })
+      return page.$eval('#table > tbody', elem => elem.children.length)
+        .catch(err => { // No table exists.
+          console.log(err.message);
+          return page.$eval('#contentStart > div.warningContainer > span', elem => {
+            if (elem.innerHTML === 'Arama kriterlerinize göre herhangi bir sonuç bulunamadı.')
+              return 0;
+            throw new Error('Unexpected warning div element.');
+          })
+        })
     });
 }
 
