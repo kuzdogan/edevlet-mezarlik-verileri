@@ -207,7 +207,14 @@ function extractDeathCount(page) {
           return page.$eval('#contentStart > div.warningContainer > span', elem => {
             if (elem.innerHTML === 'Arama kriterlerinize göre herhangi bir sonuç bulunamadı.')
               return 0;
-            throw new Error('Unexpected warning div element.');
+          }).catch(err => {
+            console.log(err.message)
+            return page.$eval('#contentStart > div.errorContainer > span', elem => {
+              if (elem.innerHTML === 'Sistemde yaşanan bir teknik aksaklık nedeni ile işleminiz tamamlanamadı.')
+                return -1;
+              else
+                throw new Error('Unexpected warning div element.');
+            })
           })
         })
     });
