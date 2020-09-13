@@ -11,6 +11,9 @@ const { resolve } = require('path');
 anticaptcha.setMinLength(5);
 anticaptcha.setMaxLength(5);
 anticaptcha.setNumeric(2); // only letters
+anticaptcha.setPhrase(false);
+anticaptcha.setCase(false);
+anticaptcha.setMath(false);
 
 const CITIES = ['Istanbul', 'Konya', 'Bursa', 'Antalya', 'Erzurum', 'Diyarbakir', 'Kocaeli', 'Kahramanmaras', 'Malatya', 'Sakarya', 'Tekirdag'];
 const LINKS = {
@@ -154,7 +157,7 @@ async function getDeathsOnDate(page, date) {
 
   try {
     let dateStr = date.format('DD/MM/YYYY');
-    let id = await submitCaptcha(page, dateStr, captchaBase64);
+    let id = await submitCaptcha(page, dateStr);
 
     // Until captcha is solved correctly, complain and submit again.
     let trials = 1;
@@ -165,7 +168,7 @@ async function getDeathsOnDate(page, date) {
           console.log('Successfully sent complatint for task ' + id);
       });
       trials++;
-      id = await submitCaptcha(page, dateStr, captchaBase64);
+      id = await submitCaptcha(page, dateStr);
     }
     console.log('Solved in ', trials, ' trials');
 
@@ -198,21 +201,21 @@ function extractDeathCount(page) {
     });
 }
 
-async function enterDateAndSolve(page, dateStr, captchaBase64) {
+async function enterDateAndSolve(page, dateStr) {
   await enterDate(page, dateStr);
-  return solveAntiCaptcha(captchaBase64).catch(err => { // If captcha solving fails getNewCaptcha and retry
+  return solveAntiCaptcha().catch(err => { // If captcha solving fails getNewCaptcha and retry
     console.log('Caught the error');
     console.log(err.message);
     console.log('Getting new captcha.');
     return getNewCaptcha(page).then(() => {
       console.log('Trying to solve the new captcha.')
-      return enterDateAndSolve(page, dateStr, captchaBase64)
+      return enterDateAndSolve(page, dateStr)
     });
   });
 }
 
 async function getNewCaptcha(page) {
-  await page.reload({ waitUntil: 'networkidle0' });
+  await page.goto(LINKS[city]);
   await sleepSec(2);
 }
 
@@ -229,10 +232,9 @@ async function enterDate(page, dateStr) {
 /**
  * Funtion to solve captcha using AntiCaptcha.
  * 
- * @param {String} captchaBase64
  * @returns {Promise<Object>} that resolves to the captcha solution text and id {text: , id: }.
  */
-function solveAntiCaptcha(captchaBase64) {
+function solveAntiCaptcha() {
   spinner.start('Solving captcha ');
   return new Promise((resolve, reject) => {
     // check balance first
@@ -268,12 +270,11 @@ function solveAntiCaptcha(captchaBase64) {
  * 
  * @param {Object} page - Puppeteer page object
  * @param {Object} client - Captcha Solver Client
- * @param {String} captchaBase64 - Captcha as base64 String
  * @returns {Promise} that resolves to the ID of the work. Used for wrong captcha complaints.
  */
-async function submitCaptcha(page, dateStr, captchaBase64) {
+async function submitCaptcha(page, dateStr) {
   // Sometimes captcha solvers just fail. Try at least three times if they fail.
-  let { text, id } = await enterDateAndSolve(page, dateStr, captchaBase64);
+  let { text, id } = await enterDateAndSolve(page, dateStr);
   spinner.succeed('Solved captcha: ' + text + ' with id: ' + id);
   await page.focus('#captcha_name');
   await page.keyboard.type(text);
