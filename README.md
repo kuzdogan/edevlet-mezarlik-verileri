@@ -2,6 +2,8 @@
 
 Türkiye illerinde 2020 yılı ölüm rakamları ile geçmiş yıllardaki ölümlerin karşılaştırılmakta ve (COVID-19 kaynaklı olabilecek) fazla ölümlerin gösterilmektedir.
 
+![alt text](graphs/Toplam.png)
+
 ### Öne çıkanlar:
 - Var olan büyükşehir belediye verilerine göre geçtiğimiz yılların ortalamalarına kıyasla 9.900 fazla ölüm gerçekleşmiştir. (13 Eylül)
 - Bu geçmiş dönemdeki ölümlere göre yaklaşık 10% bir artışı işaret etmektedir.
