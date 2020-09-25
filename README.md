@@ -31,8 +31,8 @@ Ek olarak 2020 yılında gerçekleşen vefat sayıları ve vefatların 7 günlü
 ![alt text](graphs/Kahramanmaras.png)
 ![alt text](graphs/Erzurum.png)
 ![alt text](graphs/Bursa.png)
-![alt text](graphs/Tekirdag.png)
-![alt text](graphs/Diyarbakir.png)
+![alt text](graphs/Tekirdağ.png)
+![alt text](graphs/Diyarbakır.png)
 ![alt text](graphs/Kayseri.png)
 
 # Veriler hakkında detaylar
