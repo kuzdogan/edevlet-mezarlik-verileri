@@ -53,7 +53,12 @@ async function init() {
     let date = lastRow[0] + '.2020';
     firstDay = moment(date, 'DD.MM.YYYY').add(1, 'day');
   }
-  lastDay = moment(); // Today
+  lastDay = moment(); // Today, not inclusive
+
+  // Enter custom dates.
+  // firstDay = moment('2020-09-06');
+  // lastDay = moment('2020-09-14');
+
   let numberOfDays = lastDay.diff(firstDay, 'days');
 
   console.log('First Day: ' + firstDay.format('DD MMM') + '\t Last Day: ' + lastDay.format('DD MMM'));
