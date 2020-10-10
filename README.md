@@ -23,6 +23,18 @@ Kayseri iline ait script ve veriler de [burada](https://github.com/kuzdogan/kays
 Ham veriler edevlet-mezarlik-verileri.xlsx Excel dosyasında toplanmış, temizlenmiş ve hem mevcut toplam şehirlerin hem de her bir şehrin ölüm rakamları sunulmuştur.
 Ek olarak 2020 yılında gerçekleşen vefat sayıları ve vefatların 7 günlük ortalaması; geçmiş yıllardaki vefat sayıları 7 günlük ortalaması ile karşılaştırılmış ve gerçekleşen *fazla ölüm* grafikleri çıkarılmıştır.
 
+![alt text](graphs/Istanbul.png)
+![alt text](graphs/Konya.png)
+![alt text](graphs/Malatya.png)
+![alt text](graphs/Sakarya.png)
+![alt text](graphs/Kocaeli.png)
+![alt text](graphs/Kahramanmaras.png)
+![alt text](graphs/Erzurum.png)
+![alt text](graphs/Bursa.png)
+![alt text](graphs/Tekirdağ.png)
+![alt text](graphs/Diyarbakır.png)
+![alt text](graphs/Kayseri.png)
+
 # Veriler hakkında detaylar
 
 Belirli bir gün için sorgu eğer hata vermiş ise ham veri -1 olarak girilmiştir. Bu durum özellikle Diyarbakır ve Erzurum illerinde sıkça görülmektedir.
