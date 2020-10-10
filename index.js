@@ -56,8 +56,8 @@ async function init() {
   lastDay = moment(); // Today, not inclusive
 
   // Enter custom dates.
-  // firstDay = moment('2020-09-06');
-  // lastDay = moment('2020-09-14');
+  firstDay = moment('2020-09-25');
+  lastDay = moment('2020-09-26'); // Not inclusive
 
   let numberOfDays = lastDay.diff(firstDay, 'days');
 
