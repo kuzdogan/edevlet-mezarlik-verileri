@@ -2,6 +2,8 @@
 
 Türkiye illerinde 2020 yılı ölüm rakamları ile geçmiş yıllardaki ölümlerin karşılaştırılmakta ve (COVID-19 kaynaklı olabilecek) fazla ölümlerin gösterilmektedir.
 
+Not: PDF dosyalarını buraya sığmadığı için [Dropbox'a](https://www.dropbox.com/sh/5511va748abm8r0/AAA5cqPwnn8yTaURR8MIiGXwa?dl=0) taşıdım.
+
 ![alt text](graphs/Toplam.png)
 
 ### Öne çıkanlar:
