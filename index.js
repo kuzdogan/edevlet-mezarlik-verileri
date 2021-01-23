@@ -50,7 +50,7 @@ async function init() {
     firstDay = moment('2020-01-01');
   } else { // Lookup the last day extracted. Assign the next day as first day.
     let lastRow = await getLastRow(CSV_PATH);
-    let date = lastRow[0] + '.2020';
+    let date = lastRow[0];
     firstDay = moment(date, 'DD.MM.YYYY').add(1, 'day');
   }
   lastDay = moment(); // Today, not inclusive
@@ -61,7 +61,7 @@ async function init() {
 
   let numberOfDays = lastDay.diff(firstDay, 'days');
 
-  console.log('First Day: ' + firstDay.format('DD MMM') + '\t Last Day: ' + lastDay.format('DD MMM'));
+  console.log('First Day: ' + firstDay.format('DD MMM YYYY') + '\t Last Day: ' + lastDay.format('DD MMM YYYY'));
   console.log('Number of days ', numberOfDays);
 
   if (numberOfDays === 0) {
@@ -149,7 +149,7 @@ async function main({ firstDay, numberOfDays }) {
     console.log('\tTarih: ', date2017.format('DD.MM.YYYY'));
     console.log('\tVefat sayisi: ', count2017);
 
-    csvStream.write({ Tarih: date2020.format('DD.MM'), VefatSayisi2020: count2020, VefatSayisi2019: count2019, VefatSayisi2018: count2018, VefatSayisi2017: count2017 });
+    csvStream.write({ Tarih: date2020.format('DD.MM.YYYY'), VefatSayisi2020: count2020, VefatSayisi2019: count2019, VefatSayisi2018: count2018, VefatSayisi2017: count2017 });
   } // end loop
   csvStream.end();
   await browser.close();
