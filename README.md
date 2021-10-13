@@ -1,4 +1,4 @@
-# edevlet-mezarlik-verileri
+# COVID dönemi edevlet-mezarlik-verileri
 
 2020 yılı itibariyle e-devlet'te mezarlık verileri bulunan iller için geçmiş yıllar ve pandemi dönemi vefat sayıları karşılaştırması. Yani fazla ölümler (excessive deaths)
 
