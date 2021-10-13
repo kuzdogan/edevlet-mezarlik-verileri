@@ -4,7 +4,7 @@
 
 - **10 il**: Bursa, ~~Diyarbakır~~ (güncellenmiyor), Erzurum, İstanbul, Kahramanmaraş, Kayseri (kod ve veriler [burada](https://github.com/kuzdogan/kayseri-mezarlik-verileri) ) Kocaeli, Konya, Malatya, Sakarya, Tekirdağ
 
-- **10.10.2020** itibariyle:
+- **10.10.2021** itibariyle:
   - 10 il için yaklaşık **55 bin** fazla ölüm
   - Türkiye geneli resmi **66 bin** covid vefatı
 
