@@ -18,9 +18,10 @@ Toplam mezarlık verileri (covid sonrası vs. öncesi) aşağıdaki gibi
 
 ![alt text](graphs/Toplam.png)
 
-Not: PDF dosyalarını buraya sığmadığı için [Dropbox'a](https://www.dropbox.com/sh/5511va748abm8r0/AAA5cqPwnn8yTaURR8MIiGXwa?dl=0) taşıdım.
-
 # Veriler
+
+Her bir gün il bazında vefat eden kişilerin isim listeleri ve sayfaların .pdf halleri mevcuttur. PDF dosyalarını buraya sığmadığı için [Dropbox'a](https://www.dropbox.com/sh/5511va748abm8r0/AAA5cqPwnn8yTaURR8MIiGXwa?dl=0) taşıdım.
+
 
 Not: .csv dosyalarında 31.12.2020 itibariyle başa dönüldüğü için `VefatSayisi2019` sutunundaki rakamlar aslında bir sonraki yıla denk geliyor. Bu yüzden geçmiş yıllardan baz alınan (2019+2018+2017) ölüm rakamları artmakta. Ham verileri henüz düzeltmedim fakat Excel ve grafiklerde bu veriyi düzelterek hesaplıyorum.
 
